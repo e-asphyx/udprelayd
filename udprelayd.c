@@ -70,6 +70,7 @@ static void udprelay_cleanup(udprelay_t *udprelay);
 #ifdef DEBUG
 static void rawdump(const void *buf, size_t size) {
     fwrite(buf, 1, size, stderr);
+    fprintf(stderr, "\n");
 }
 #else
 #   define rawdump(buf,sz)
