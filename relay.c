@@ -68,7 +68,7 @@ static void split_addr(char *src, char **host, char **service) {
         fprintf(stderr, "%s:%u\n", buf, (unsigned int)ntohs(((struct sockaddr_in*)sa)->sin_port));
     }
 #else
-#   define dump_sockaddr(sa, len)
+#   define dump_sockaddr(sa)
 #endif
 
 /* Create new relay */
