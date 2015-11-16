@@ -57,16 +57,16 @@ static void split_addr(char *src, char **host, char **service) {
 }
 
 #ifdef DEBUG
-    static void dump_sockaddr(const struct sockaddr *sa) {
-        char buf[INET6_ADDRSTRLEN];
-        if(sa->sa_family == AF_INET6) {
-            inet_ntop(AF_INET6, &((struct sockaddr_in6*)sa)->sin6_addr, buf, sizeof(buf));
-        } else {
-            inet_ntop(AF_INET, &((struct sockaddr_in*)sa)->sin_addr, buf, sizeof(buf));
-        }
-
-        fprintf(stderr, "%s:%u\n", buf, (unsigned int)ntohs(((struct sockaddr_in*)sa)->sin_port));
+static void dump_sockaddr(const struct sockaddr *sa) {
+    char buf[INET6_ADDRSTRLEN];
+    if(sa->sa_family == AF_INET6) {
+        inet_ntop(AF_INET6, &((struct sockaddr_in6*)sa)->sin6_addr, buf, sizeof(buf));
+    } else {
+        inet_ntop(AF_INET, &((struct sockaddr_in*)sa)->sin_addr, buf, sizeof(buf));
     }
+
+    fprintf(stderr, "%s:%u\n", buf, (unsigned int)ntohs(((struct sockaddr_in*)sa)->sin_port));
+}
 #else
 #   define dump_sockaddr(sa)
 #endif
