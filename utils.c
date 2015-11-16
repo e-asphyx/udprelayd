@@ -27,6 +27,7 @@ SOFTWARE.
 #include <string.h>
 #include <stdarg.h>
 #include <fcntl.h>
+#include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 
