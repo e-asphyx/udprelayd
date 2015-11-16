@@ -166,7 +166,7 @@ static int udprelay_dispatch_inbound(udprelay_t *udprelay, const void *buffer, s
             free_relay(r);
             udprelay->relays_num--;
         } else {
-            X_DBG("Sent %d (%d of %d), %lu bytes\n", udprelay->seq, i, udprelay->relays_num, sizeof(header_t) + sz);
+            X_DBG("Sent %d (%d of %d), %lu bytes\n", udprelay->seq, i, udprelay->relays_num, sizeof(header_t) + (unsigned long)sz);
         }
         i++;
     }
