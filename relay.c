@@ -293,11 +293,9 @@ int relay_handle(relay_t *relay, const fd_set *rfds, const fd_set *wfds) {
 
         ssize_t sz = recvfrom(relay->fd, relay->recv_buffer, BUF_SZ, 0, &sa.sa, &salen);
 
-        if(X_UNLIKELY(sz <= 0)) {
-            if(sz < 0 && errno != EAGAIN) {
-                syslog(LOG_ERR, "%s: %m", relay->remote_addr);
-                return -1;
-            }
+        if(X_UNLIKELY(!sz || (sz < 0 && errno != EAGAIN))) {
+            syslog(LOG_ERR, "%s: %m", relay->remote_addr);
+            return -1;
         } else {
             relay->recv_size = sz;
             /* Update out address */
@@ -316,30 +314,39 @@ int relay_handle(relay_t *relay, const fd_set *rfds, const fd_set *wfds) {
             ssize_t sz = sendto(relay->fd, relay->send_buffer, relay->send_size, 0,
                 &relay->remote_sa.sa, relay->remote_sa_len);
 
-            if(X_UNLIKELY(!sz || (sz < 0 && errno != EMSGSIZE))) {
-                if(!sz || (sz < 0 && errno != EAGAIN)) {
-                    if(sz < 0) syslog(LOG_ERR, "%s: %m", relay->remote_addr);
-                    return -1;
-                }
-            } else {
+            if(sz || (sz < 0 && errno == EMSGSIZE)) {
                 relay->send_size = 0;
+                return 0;
             }
+
+            if(X_UNLIKELY(!sz || (sz < 0 && errno != EAGAIN))) {
+                if(sz < 0) syslog(LOG_ERR, "%s: %m", relay->remote_addr);
+                return -1;
+            }
+
+            relay->send_size = 0;
+
         } else if(relay->queue) {
             queue_t *item = relay->queue;
 
             ssize_t sz = sendto(relay->fd, item->buffer, item->length, 0,
                 &relay->remote_sa.sa, relay->remote_sa_len);
 
-            if(X_UNLIKELY(!sz || (sz < 0 && errno != EMSGSIZE))) {
-                if(!sz || (sz < 0 && errno != EAGAIN)) {
-                    if(sz < 0) syslog(LOG_ERR, "%s: %m", relay->remote_addr);
-                    return -1;
-                }
-            } else {
+            if(sz || (sz < 0 && errno == EMSGSIZE)) {
                 CLIST_DEL(relay->queue, item);
                 free(item->buffer);
                 free(item);
+                return 0;
             }
+
+            if(X_UNLIKELY(!sz || (sz < 0 && errno != EAGAIN))) {
+                if(sz < 0) syslog(LOG_ERR, "%s: %m", relay->remote_addr);
+                return -1;
+            }
+
+            CLIST_DEL(relay->queue, item);
+            free(item->buffer);
+            free(item);
         }
     }
 
