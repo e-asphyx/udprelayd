@@ -67,15 +67,6 @@ struct _udprelay_t
 
 static void udprelay_cleanup(udprelay_t *udprelay);
 
-#ifdef DEBUG
-static void rawdump(const void *buf, size_t size) {
-    fwrite(buf, 1, size, stderr);
-    fprintf(stderr, "\n");
-}
-#else
-#   define rawdump(buf,sz)
-#endif
-
 static int udprelay_init(udprelay_t *udprelay, const char *conf_file) {
     memset(udprelay, 0, sizeof(udprelay_t));
 
@@ -144,7 +135,6 @@ static int udprelay_dispatch_relayed(udprelay_t *udprelay, const void *buffer, s
         return 0;
     }
     X_DBG("Received %d\n", seq);
-    rawdump(&hdr->payload, sz - sizeof(header_t));
 
     /* Strip header and forward */
     return relay_enqueue(udprelay->outward, &hdr->payload, sz - sizeof(header_t));
@@ -177,7 +167,6 @@ static int udprelay_dispatch_inbound(udprelay_t *udprelay, const void *buffer, s
             udprelay->relays_num--;
         } else {
             X_DBG("Sent %d (%d of %d), %lu bytes\n", udprelay->seq, i, udprelay->relays_num, sizeof(header_t) + (unsigned long)sz);
-            rawdump(buffer, sz);
         }
         i++;
     }
