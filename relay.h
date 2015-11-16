@@ -12,10 +12,15 @@
 typedef struct _relay_t relay_t;
 typedef struct _queue_t queue_t;
 
+typedef union {
+    struct sockaddr sa;
+    struct sockaddr_storage _storage;
+} sockaddr_t;
+
 struct _relay_t {
     int fd;
 
-    struct sockaddr remote_sa;
+    sockaddr_t remote_sa;
     socklen_t remote_sa_len;
 
     /* Update remote_sa on every incoming packet with its source address */
