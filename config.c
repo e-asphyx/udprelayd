@@ -111,7 +111,7 @@ config_t *parse_config(const char *file) {
 
     fclose(fp);
 
-    if(!conf->outward.local_addr || !conf->outward.remote_addr || !conf->relay_config) {
+    if((!conf->outward.local_addr && !conf->outward.remote_addr) || !conf->relay_config) {
         /* Missing critical parameters */
         free_config(conf);
         return NULL;

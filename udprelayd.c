@@ -84,7 +84,8 @@ static int udprelay_init(udprelay_t *udprelay, const char *conf_file) {
     }
     
     syslog(LOG_INFO, "Outward interface: listen to %s, forward to %s",
-        udprelay->outward->local_addr, udprelay->outward->remote_addr);
+        udprelay->outward->local_addr ? udprelay->outward->local_addr : "<unspec>",
+        udprelay->outward->remote_addr ? udprelay->outward->remote_addr : "<dynamic>");
 
     /* Add relays */
     relay_config_t *c;
@@ -98,7 +99,9 @@ static int udprelay_init(udprelay_t *udprelay, const char *conf_file) {
 
         CLIST_ADD_LAST(udprelay->relays, relay);
         udprelay->relays_num++;
-        syslog(LOG_INFO, "Add relay from %s to %s", relay->local_addr, relay->remote_addr);
+        syslog(LOG_INFO, "Add relay from %s to %s",
+            relay->local_addr ? relay->local_addr : "<unspec>",
+            relay->remote_addr ? relay->remote_addr : "<dynamic>");
     }
 
     udprelay->lookup = new_lookup(config->track);
@@ -175,7 +178,7 @@ static int udprelay_dispatch_inbound(udprelay_t *udprelay, const void *buffer, s
 
 /* ----------------------------------------------------------------------------- */
 
-static bool sigterm_evt = 0;
+static volatile bool sigterm_evt = false;
 static void sigterm_handler(int signum) {
     sigterm_evt = true;
 }
@@ -259,7 +262,7 @@ int main(int argc, char **argv) {
 
         if(X_UNLIKELY((ret < 0 && errno != EAGAIN) || sigterm_evt)) {
             /* signal or error */
-            if(ret < 0) syslog(LOG_ERR, "%m");
+            if(ret < 0 && errno != EINTR) syslog(LOG_ERR, "%m");
             break;
 
         } else if(ret > 0) {
@@ -303,9 +306,6 @@ int main(int argc, char **argv) {
             }
         }
     }
-
-    signal(SIGTERM, old_sigterm);
-    signal(SIGINT, old_sigint);
 
     syslog(LOG_INFO, "Terminating");
 

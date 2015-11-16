@@ -15,8 +15,11 @@ typedef struct _queue_t queue_t;
 struct _relay_t {
     int fd;
 
-    struct sockaddr *remote_sa;
+    struct sockaddr remote_sa;
     socklen_t remote_sa_len;
+
+    /* Update remote_sa on every incoming packet with its source address */
+    bool dynamic_out_addr;
 
     char *local_addr;
     char *remote_addr;

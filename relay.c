@@ -57,9 +57,12 @@ static void split_addr(char *src, char **host, char **service) {
 /* Create new relay */
 relay_t *new_relay(const relay_config_t *config) {
     /* Resolve local address */
-    char *local_addr = xstrdup(config->local_addr);
-    char *local_host, *local_service;
-    split_addr(local_addr, &local_host, &local_service);
+    char *local_addr = NULL, *local_host = NULL, *local_service = NULL;
+
+    if(config->local_addr) {
+        local_addr = xstrdup(config->local_addr);
+        split_addr(local_addr, &local_host, &local_service);
+    }
 
     struct addrinfo hints, *res_local;
     memset(&hints, 0, sizeof(struct addrinfo));
@@ -68,12 +71,14 @@ relay_t *new_relay(const relay_config_t *config) {
     hints.ai_flags = AI_PASSIVE;
     
     int err;
-    if(X_UNLIKELY((err = getaddrinfo(local_host[0] != '*' ? local_host : NULL, local_service, &hints, &res_local)) != 0)) {
-        syslog(LOG_ERR, "%s: %s", local_host, gai_strerror(err));
-        free(local_addr);
+    if(X_UNLIKELY((err = getaddrinfo(local_host ? (local_host[0] != '*' ? local_host : NULL) : NULL,
+            local_service ? local_service : NULL,
+            &hints, &res_local)) != 0)) {
+        syslog(LOG_ERR, "%s", gai_strerror(err));
+        if(local_addr) free(local_addr);
         return NULL;
     }
-    free(local_addr);
+    if(local_addr) free(local_addr);
 
     int fd = -1;
     struct addrinfo *r, local_ai;
@@ -86,7 +91,7 @@ relay_t *new_relay(const relay_config_t *config) {
 
         if(X_UNLIKELY(setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) < 0)) {
             close(fd);
-            syslog(LOG_ERR, "%s: %m", config->local_addr);
+            syslog(LOG_ERR, "%m");
             return NULL;
         }
 
@@ -102,28 +107,38 @@ relay_t *new_relay(const relay_config_t *config) {
     freeaddrinfo(res_local);
 
     if(fd < 0) {
-        syslog(LOG_ERR, "%s: %m", config->local_addr);
+        syslog(LOG_ERR, "%m");
         return NULL;
     }
+
+    struct sockaddr remote_sa;
+    socklen_t remote_sa_len = 0;
 
     /* Resolve remote address */
-    char *remote_addr = xstrdup(config->remote_addr);
-    char *remote_host, *remote_service;
-    split_addr(remote_addr, &remote_host, &remote_service);
+    if(config->remote_addr) {
+        char *remote_addr = xstrdup(config->remote_addr);
+        char *remote_host, *remote_service;
+        split_addr(remote_addr, &remote_host, &remote_service);
 
-    struct addrinfo *res_remote;
-    memset(&hints, 0, sizeof(struct addrinfo));
-    hints.ai_family = local_ai.ai_family;
-    hints.ai_socktype = local_ai.ai_socktype;
-    hints.ai_protocol = local_ai.ai_protocol;
+        struct addrinfo *res_remote;
+        memset(&hints, 0, sizeof(struct addrinfo));
+        hints.ai_family = local_ai.ai_family;
+        hints.ai_socktype = local_ai.ai_socktype;
+        hints.ai_protocol = local_ai.ai_protocol;
 
-    if(X_UNLIKELY((err = getaddrinfo(remote_host, remote_service, &hints, &res_remote)) != 0)) {
-        syslog(LOG_ERR, "%s: %s", remote_host, gai_strerror(err));
-        close(fd);
+        if(X_UNLIKELY((err = getaddrinfo(remote_host, remote_service, &hints, &res_remote)) != 0)) {
+            syslog(LOG_ERR, "%s: %s", remote_host, gai_strerror(err));
+            close(fd);
+            free(remote_addr);
+            return NULL;
+        }
+
+        memcpy(&remote_sa, res_remote->ai_addr, res_remote->ai_addrlen);
+        remote_sa_len = res_remote->ai_addrlen;
+
+        freeaddrinfo(res_remote);
         free(remote_addr);
-        return NULL;
     }
-    free(remote_addr);
 
     int flags = fcntl(fd, F_GETFL, 0);
     fcntl(fd, F_SETFL, flags | O_NONBLOCK);
@@ -131,14 +146,16 @@ relay_t *new_relay(const relay_config_t *config) {
     /* New relay */
     relay_t *relay = calloc(1, sizeof(relay_t));
 
-    relay->remote_sa = malloc(res_remote->ai_addrlen);
-    memcpy(relay->remote_sa, res_remote->ai_addr, res_remote->ai_addrlen);
-    relay->remote_sa_len = res_remote->ai_addrlen;
-    freeaddrinfo(res_remote);
+    if(remote_sa_len) {
+        memcpy(&relay->remote_sa, &remote_sa, remote_sa_len);
+        relay->remote_sa_len = remote_sa_len;
+    } else {
+        relay->dynamic_out_addr = true;
+    }
 
     relay->fd = fd;
-    relay->local_addr = xstrdup(config->local_addr);
-    relay->remote_addr = xstrdup(config->remote_addr);
+    if(config->local_addr) relay->local_addr = xstrdup(config->local_addr);
+    if(config->remote_addr) relay->remote_addr = xstrdup(config->remote_addr);
 
     return relay;
 }
@@ -155,9 +172,8 @@ void free_relay(relay_t *relay) {
         free(q->buffer);
         free(q);
     }
-    free(relay->remote_sa);
-    free(relay->local_addr);
-    free(relay->remote_addr);
+    if(relay->local_addr) free(relay->local_addr);
+    if(relay->remote_addr) free(relay->remote_addr);
     free(relay);
 }
 
@@ -171,6 +187,11 @@ void relay_fd_set(relay_t *relay, fd_set *rfds, fd_set *wfds) {
 }
 
 ssize_t relay_enqueue(relay_t *relay, const void *buffer, size_t length) {
+    if(!relay->remote_sa_len) {
+        /* Drop */
+        return 0;
+    }
+
     /* TODO try to send immediately */
 
     /* Add to queue */
@@ -215,7 +236,10 @@ int relay_handle(relay_t *relay, const fd_set *rfds, const fd_set *wfds) {
             relay->recv_buffer = malloc(BUF_SZ);
         }
 
-        ssize_t sz = recv(relay->fd, relay->recv_buffer, BUF_SZ, 0);
+        struct sockaddr sa;
+        socklen_t salen;
+
+        ssize_t sz = recvfrom(relay->fd, relay->recv_buffer, BUF_SZ, 0, &sa, &salen);
 
         if(X_UNLIKELY(sz <= 0)) {
             if(sz < 0 && errno != EAGAIN) {
@@ -224,6 +248,11 @@ int relay_handle(relay_t *relay, const fd_set *rfds, const fd_set *wfds) {
             }
         } else {
             relay->recv_size = sz;
+            /* Update out address */
+            if(relay->dynamic_out_addr) {
+                memcpy(&relay->remote_sa, &sa, salen);
+                relay->remote_sa_len = salen;
+            }
         }
     }
 
@@ -231,7 +260,7 @@ int relay_handle(relay_t *relay, const fd_set *rfds, const fd_set *wfds) {
     if(FD_ISSET(relay->fd, wfds)) {
         if(relay->send_size) {
             ssize_t sz = sendto(relay->fd, relay->send_buffer, relay->send_size, 0,
-                relay->remote_sa, relay->remote_sa_len);
+                &relay->remote_sa, relay->remote_sa_len);
 
             if(X_UNLIKELY(!sz || (sz < 0 && errno != EMSGSIZE))) {
                 if(!sz || (sz < 0 && errno != EAGAIN)) {
@@ -245,7 +274,7 @@ int relay_handle(relay_t *relay, const fd_set *rfds, const fd_set *wfds) {
             queue_t *item = relay->queue;
 
             ssize_t sz = sendto(relay->fd, item->buffer, item->length, 0,
-                relay->remote_sa, relay->remote_sa_len);
+                &relay->remote_sa, relay->remote_sa_len);
 
             if(X_UNLIKELY(!sz || (sz < 0 && errno != EMSGSIZE))) {
                 if(!sz || (sz < 0 && errno != EAGAIN)) {
