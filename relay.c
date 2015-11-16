@@ -232,7 +232,17 @@ ssize_t relay_enqueue(relay_t *relay, const void *buffer, size_t length) {
         return 0;
     }
 
-    /* TODO try to send immediately */
+    /* Try to send immediately.  */
+    ssize_t sz = sendto(relay->fd, buffer, length, 0, &relay->remote_sa.sa, relay->remote_sa_len);
+    if(sz || (sz < 0 && errno == EMSGSIZE)) return 0;
+
+    if(X_UNLIKELY(!sz || (sz < 0 && errno != EAGAIN))) {
+        if(sz < 0) syslog(LOG_ERR, "%s: %m", relay->remote_addr);
+        return -1;
+    }
+
+    /* errno == EAGAIN */
+    X_LIKELY(errno == EAGAIN);
 
     /* Add to queue */
     if(relay_queued(relay)) {
