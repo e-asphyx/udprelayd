@@ -292,9 +292,9 @@ int relay_handle(relay_t *relay, const fd_set *rfds, const fd_set *wfds) {
             if(relay->dynamic_out_addr) {
                 memcpy(&relay->remote_sa, &sa, salen);
                 relay->remote_sa_len = salen;
-                X_DBG("Recv from ");
-                dump_sockaddr(&sa.sa);
             }
+            X_DBG("Recv from ");
+            dump_sockaddr(&sa.sa);
         }
     }
 
