@@ -123,6 +123,7 @@ static void udprelay_cleanup(udprelay_t *udprelay) {
 
 /* Handle packet received from peers */
 static int udprelay_dispatch_relayed(udprelay_t *udprelay, const void *buffer, size_t sz) {
+    X_DBG("%lu bytes\n", (unsigned long)sz);
     if(sz < sizeof(header_t)) return 0; /* Drop */
 
     const header_t *hdr = (header_t*)buffer;
@@ -165,7 +166,7 @@ static int udprelay_dispatch_inbound(udprelay_t *udprelay, const void *buffer, s
             free_relay(r);
             udprelay->relays_num--;
         } else {
-            X_DBG("Sent %d (%d of %d)\n", udprelay->seq, i, udprelay->relays_num);
+            X_DBG("Sent %d (%d of %d), %lu bytes\n", udprelay->seq, i, udprelay->relays_num, sizeof(header_t) + sz);
         }
         i++;
     }
