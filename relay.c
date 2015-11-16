@@ -287,6 +287,8 @@ int relay_handle(relay_t *relay, const fd_set *rfds, const fd_set *wfds) {
                 return -1;
             }
         } else {
+            X_DBG("recv_buffer: %04x\n", *((uint16_t*)relay->recv_buffer));
+
             relay->recv_size = sz;
             /* Update out address */
             if(relay->dynamic_out_addr) {
@@ -301,6 +303,7 @@ int relay_handle(relay_t *relay, const fd_set *rfds, const fd_set *wfds) {
     /* Write event */
     if(FD_ISSET(relay->fd, wfds)) {
         if(relay->send_size) {
+            X_DBG("send_buffer: %04x\n", *((uint16_t*)relay->send_buffer));
             ssize_t sz = sendto(relay->fd, relay->send_buffer, relay->send_size, 0,
                 &relay->remote_sa.sa, relay->remote_sa_len);
 
