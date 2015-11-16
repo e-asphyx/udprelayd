@@ -236,6 +236,7 @@ ssize_t relay_enqueue(relay_t *relay, const void *buffer, size_t length) {
 
     /* Add to queue */
     if(relay_queued(relay)) {
+        X_DBG("queued\n");
         queue_t *item = malloc(sizeof(queue_t));
         item->buffer = malloc(length);
         memcpy(item->buffer, buffer, length);
@@ -243,6 +244,7 @@ ssize_t relay_enqueue(relay_t *relay, const void *buffer, size_t length) {
 
         CLIST_ADD_LAST(relay->queue, item);
     } else {
+        X_DBG("buffered\n");
         if(!relay->send_buffer) {
             relay->send_buffer_size = length;
             relay->send_buffer = malloc(length);
@@ -287,8 +289,6 @@ int relay_handle(relay_t *relay, const fd_set *rfds, const fd_set *wfds) {
                 return -1;
             }
         } else {
-            X_DBG("recv_buffer: %04x\n", *((uint16_t*)relay->recv_buffer));
-
             relay->recv_size = sz;
             /* Update out address */
             if(relay->dynamic_out_addr) {
@@ -303,7 +303,6 @@ int relay_handle(relay_t *relay, const fd_set *rfds, const fd_set *wfds) {
     /* Write event */
     if(FD_ISSET(relay->fd, wfds)) {
         if(relay->send_size) {
-            X_DBG("send_buffer: %04x\n", *((uint16_t*)relay->send_buffer));
             ssize_t sz = sendto(relay->fd, relay->send_buffer, relay->send_size, 0,
                 &relay->remote_sa.sa, relay->remote_sa_len);
 

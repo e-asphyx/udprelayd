@@ -158,7 +158,7 @@ static int udprelay_dispatch_inbound(udprelay_t *udprelay, const void *buffer, s
 #ifdef DEBUG
         hdr->pkt_num = htons(i);
 #endif
-        if(X_UNLIKELY(relay_enqueue(r, &hdr, sizeof(header_t) + sz) < 0)) {
+        if(X_UNLIKELY(relay_enqueue(r, hdr, sizeof(header_t) + sz) < 0)) {
             syslog(LOG_WARNING, "Relay disabled");
             
             /* Remove from list */
