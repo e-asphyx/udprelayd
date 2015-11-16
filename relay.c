@@ -277,7 +277,7 @@ int relay_handle(relay_t *relay, const fd_set *rfds, const fd_set *wfds) {
         }
 
         sockaddr_t sa;
-        socklen_t salen;
+        socklen_t salen = sizeof(sockaddr_t);
 
         ssize_t sz = recvfrom(relay->fd, relay->recv_buffer, BUF_SZ, 0, &sa.sa, &salen);
 
