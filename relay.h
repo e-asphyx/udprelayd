@@ -5,6 +5,8 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/select.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include "config.h"
 #include "clist.h"
@@ -22,6 +24,7 @@ struct _relay_t {
 
     sockaddr_t remote_sa;
     socklen_t remote_sa_len;
+    char remote_sa_buf[INET6_ADDRSTRLEN];
 
     /* Update remote_sa on every incoming packet with its source address */
     bool dynamic_out_addr;
