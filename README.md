@@ -6,14 +6,14 @@ It appends incremental sequence number for every incoming datagram and sends it 
 ```
                            Relay 0  ,---------------.
                         ,;========= | seq | payload | ===:.
-                        ||          '---------------‘    ||
+                        ||          `---------------‘    ||
                         || Relay 1  ,---------------.    ||
 Peer 0 <===> Node 0 <===++========= | seq | payload | ===++==> Node 1 <===> Peer 1
-                        ||          '---------------‘    ||
+                        ||          `---------------‘    ||
                                          ...
                         || Relay N  ,---------------.    ||
                         ':========= | seq | payload | ===:‘
-                                    '---------------‘
+                                    `---------------‘
 ```
 
 ## Usage
@@ -24,7 +24,7 @@ udprelayd [-d|--detach] [-p|--pidfile pidfile] config
 ## Config file syntax
 The file contains keyword-argument pairs, one per line. Lines starting with `#' and empty lines are interpreted as comments. The possible keywords and their meanings are as follows.
 * **listen**
-  * Bind main socket to this address. Format is host[:port]. Use '*' as host to listen on all possible addresses.
+  * Bind main socket to this address. Format is `host[:port]`. Use `*' as host to listen on all possible addresses.
 * **forward**
   * Forward stripped packets to this address. Format is host:port. At least one of listen and forward addresses must be specified.
 * **relay**
