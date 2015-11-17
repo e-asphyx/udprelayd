@@ -256,7 +256,7 @@ ssize_t relay_enqueue(relay_t *relay, const void *buffer, size_t length) {
     }
 
     /* errno == EAGAIN */
-    X_LIKELY(errno == EAGAIN);
+    (void)X_LIKELY(errno == EAGAIN);
 
     /* Add to queue */
     if(relay_queued(relay)) {
