@@ -85,6 +85,13 @@ relay_t *new_relay(const relay_config_t *config) {
     if(config->remote_addr) {
         remote_addr = xstrdup(config->remote_addr);
         split_addr(remote_addr, &remote_host, &remote_service);
+
+        if(!remote_service) {
+            if(local_addr) free(local_addr);
+            free(remote_addr);
+            syslog(LOG_ERR, "Port number is not specified for %s", config->remote_addr);
+            return NULL;
+        }
     }
 
     struct addrinfo hints, *res_local;
@@ -95,7 +102,7 @@ relay_t *new_relay(const relay_config_t *config) {
     
     int err;
     if(X_UNLIKELY((err = getaddrinfo(local_host ? (local_host[0] != '*' ? local_host : NULL) : remote_host,
-            local_service ? local_service : remote_service,
+            local_host ? local_service : remote_service,
             &hints, &res_local)) != 0)) {
 
         syslog(LOG_ERR, "%s: %s", config->local_addr ? config->local_addr : config->remote_addr, gai_strerror(err));

@@ -24,11 +24,11 @@ udprelayd [-d|--detach] [-p|--pidfile pidfile] config
 ## Config file syntax
 The file contains keyword-argument pairs, one per line. Lines starting with `#' and empty lines are interpreted as comments. The possible keywords and their meanings are as follows.
 * **listen**
-  * Bind main socket to this address. Format is host:port. Use '*' as host to listen on all possible addresses.
+  * Bind main socket to this address. Format is host[:port]. Use '*' as host to listen on all possible addresses.
 * **forward**
   * Forward stripped packets to this address. Format is host:port. At least one of listen and forward addresses must be specified.
 * **relay**
-  * Format: `relay [local host:port] [remote host:port]`. At least one of local and remote addresses must be specified.
+  * Format: `relay [local host[:port]] [remote host:port]`. At least one of local and remote addresses must be specified.
 * **track**
   * Integer number. Keep sequence numbers of last N datagrams received from remote node to remove duplicates.
 

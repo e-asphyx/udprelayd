@@ -72,7 +72,7 @@ config_t *parse_config(const char *file) {
                 if(arg != OPT_LOCAL && arg != OPT_REMOTE) continue;
 
                 char *addr = strtok_r(NULL, delim, &last);
-                if(!addr || !strchr(addr, ':')) break;
+                if(!addr) break;
 
                 if(arg == OPT_LOCAL) {
                     strreplace(&relay_conf->local_addr, addr);
@@ -94,12 +94,10 @@ config_t *parse_config(const char *file) {
 
             switch(opt) {
                 case OPT_LISTEN:
-                    if(!strchr(arg, ':')) break;
                     strreplace(&conf->outward.local_addr, arg);
                     break;
 
                 case OPT_FORWARD:
-                    if(!strchr(arg, ':')) break;
                     strreplace(&conf->outward.remote_addr, arg);
                     break;
 
