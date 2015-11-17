@@ -105,7 +105,7 @@ relay_t *new_relay(const relay_config_t *config) {
     }
 
     int fd = -1;
-    struct addrinfo *r, local_ai;
+    struct addrinfo *r, local_ai = {};
     sockaddr_t remote_sa;
     socklen_t remote_sa_len = 0;
 
